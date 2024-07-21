@@ -10,8 +10,9 @@
 #include "log.h"
 
 static const char* BMCV_LIBRARY_FILE_NAME =
-    "/opt/sophon/libsophon-current/lib/libbmcv.so.0.7.3";
-static const char* BMLIB_LIBRARY_FILE_NAME = "";
+    "/opt/sophon/libsophon-current/lib/libbmcv.so";
+static const char* BMLIB_LIBRARY_FILE_NAME =
+    "/opt/sophon/libsophon-current/lib/libbmlib.so";
 
 class bmHandle {
  public:

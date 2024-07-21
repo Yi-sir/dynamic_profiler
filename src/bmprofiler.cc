@@ -12,6 +12,8 @@
     log_info("function [%s] cost time: [%d] us", __func__, duration.count()); \
   } while (false)
 
+// TODO: 如何优化下面的逻辑？
+
 // Define your stub below
 bm_status_t bmcv_image_vpp_convert_padding(bm_handle_t handle, int output_num,
                                            bm_image input, bm_image* output,

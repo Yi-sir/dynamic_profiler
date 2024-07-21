@@ -14,6 +14,12 @@ static const char* BMCV_LIBRARY_FILE_NAME =
 static const char* BMLIB_LIBRARY_FILE_NAME =
     "/opt/sophon/libsophon-current/lib/libbmlib.so";
 
+// TODO:
+// 把bmHandle里的void*改成vector，上面的filename改成一个char**
+// 初始化时遍历所有的char*，全都打开并把句柄添加到vector
+// 搜索时在所有的句柄里搜索
+// 析构时释放所有句柄
+
 class bmHandle {
  public:
   bmHandle() = delete;

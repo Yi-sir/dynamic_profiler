@@ -35,4 +35,5 @@ function [bmcv_image_vpp_convert_padding] cost time: [490] us
 ## 说明
 
 > 动态插桩只有当显式将此so设置到环境变量时才会生效。如果未设置，本so将不参与程序运行
+
 > python程序使用方法与C++相同，设置`LD_PRELOAD`即可

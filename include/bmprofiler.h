@@ -3,62 +3,80 @@
 
 #include <dlfcn.h>
 
+#include <algorithm>
 #include <iostream>
+#include <map>
+#include <numeric>
+#include <vector>
 
 #include "bmcv_api_ext.h"
-#include "bmlib_runtime.h"
+#include "bmruntime_interface.h"
 #include "log.h"
 
-static const char* BMCV_LIBRARY_FILE_NAME =
-    "/opt/sophon/libsophon-current/lib/libbmcv.so";
-static const char* BMLIB_LIBRARY_FILE_NAME =
-    "/opt/sophon/libsophon-current/lib/libbmlib.so";
+static const char* SHARED_OBJECT_FILES[] = {
+    "/opt/sophon/libsophon-current/lib/libbmcv.so",
+    "/opt/sophon/libsophon-current/lib/libbmlib.so",
+    "/opt/sophon/libsophon-current/lib/libbmrt.so"};
 
-// TODO:
-// 把bmHandle里的void*改成vector，上面的filename改成一个char**
-// 初始化时遍历所有的char*，全都打开并把句柄添加到vector
-// 搜索时在所有的句柄里搜索
-// 析构时释放所有句柄
+using sharedObjectHandle = void*;
+using functionPtr = void*;
 
 class bmHandle {
  public:
-  bmHandle() = delete;
-  bmHandle(const std::string bmcvLibName, const std::string bmlibLibName) {
-    if (bmcvLibName != "") {
-      bmcvHandle = dlopen(bmcvLibName.c_str(), RTLD_NOW | RTLD_GLOBAL);
-      if (bmcvHandle == nullptr) {
-        std::cerr << "dlopen failed" << std::endl;
-        log_error("dlopen failed [%s]", bmcvLibName.c_str());
-        exit(-1);
+  bmHandle() {
+    for (auto& sharedObjectFile : SHARED_OBJECT_FILES) {
+      sharedObjectHandle handle =
+          dlopen(sharedObjectFile, RTLD_NOW | RTLD_GLOBAL);
+      if (handle == nullptr) {
+        log_error("dlopen failed [%s]", sharedObjectFile);
+      } else {
+        handles.push_back(handle);
       }
-    }
-    if (bmlibLibName != "") {
-      bmlibHandle = dlopen(bmlibLibName.c_str(), RTLD_NOW | RTLD_GLOBAL);
-      if (bmlibHandle == nullptr) {
-        log_error("dlopen failed [%s]", bmlibLibName.c_str());
-        exit(-1);
-      }
-    }
-    log_info("load library [%s], [%s] successfully", bmcvLibName.c_str(),
-             bmlibLibName.c_str());
-  }
-  ~bmHandle() {
-    if (bmcvHandle) {
-      dlclose(bmcvHandle);
-    }
-    if (bmlibHandle) {
-      dlclose(bmlibHandle);
     }
   }
 
-  void* getBmcvHandle() const { return bmcvHandle; }
-  void* getBmlibHandle() const { return bmlibHandle; }
+  ~bmHandle() {
+    for (auto& handle : handles) {
+      dlclose(handle);
+    }
+    summary();
+  }
+
+  functionPtr searchSymbol(const char* funcName) {
+    functionPtr ptr = nullptr;
+    for (auto& handle : handles) {
+      ptr = dlsym(handle, funcName);
+      if (ptr) return ptr;
+    }
+    log_error("search symbol failed, [%s]", funcName);
+    return ptr;
+  }
+
+  void updateMap(const char* funcName, long timeCost) {
+    timeCostMap[funcName].push_back(timeCost);
+    return;
+  }
+
+  void summary() {
+    log_info("====== SUMMARY START ======");
+    for (auto& [k, v] : timeCostMap) {
+      auto maxTime = *std::max_element(std::begin(v), std::end(v));
+      auto minTime = *std::min_element(std::begin(v), std::end(v));
+      auto sumTime = std::accumulate(std::begin(v), std::end(v), 0);
+      auto avgTime = sumTime / (float)v.size();
+      log_info(
+          "Func: [%s], max time cost: [%d], min time cost: [%d], avg time "
+          "cost: [%.2f]",
+          k, maxTime, minTime, avgTime);
+    }
+    log_info("======= SUMMARY END =======");
+  }
 
  private:
-  void* bmcvHandle = nullptr;
-  void* bmlibHandle = nullptr;
+  std::vector<sharedObjectHandle> handles;
+  std::map<const char*, std::vector<long>> timeCostMap;
 };
 
-bmHandle wrapper(BMCV_LIBRARY_FILE_NAME, BMLIB_LIBRARY_FILE_NAME);
+bmHandle wrapper;
 
 #endif
